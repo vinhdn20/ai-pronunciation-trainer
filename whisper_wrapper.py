@@ -16,9 +16,14 @@ class WhisperASRModel(IASRModel):
         if isinstance(audio, torch.Tensor):
             audio = audio.detach().cpu().numpy()
         result = self.asr(audio[0])
+        
         self._transcript = result["text"]
-        self._word_locations = [{"word":word_info["text"], "start_ts":word_info["timestamp"][0]*self.sample_rate,
-                                 "end_ts":word_info["timestamp"][1]*self.sample_rate} for word_info in result["chunks"]]
+        self._word_locations = [{
+                "word": word_info["text"],
+                "start_ts": word_info["timestamp"][0] * self.sample_rate,
+                "end_ts": None if word_info["timestamp"][1] is None else word_info["timestamp"][1] * self.sample_rate
+            } for word_info in result["chunks"]]
+        print("Process audio whisper word locations: ",self._word_locations)
 
     def getTranscript(self) -> str:
         return self._transcript

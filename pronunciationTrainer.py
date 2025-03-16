@@ -53,8 +53,13 @@ class PronunciationTrainer:
         word_locations_in_samples = self.asr_model.getWordLocations()
 
         fade_duration_in_samples = 0.05*self.sampling_rate
-        word_locations_in_samples = [(int(np.maximum(0, word['start_ts']-fade_duration_in_samples)), int(np.minimum(
-            audio_length_in_samples-1, word['end_ts']+fade_duration_in_samples))) for word in word_locations_in_samples]
+        word_locations_in_samples = [
+            (
+                int(np.maximum(0, word['start_ts'] - fade_duration_in_samples)),
+                None if word['end_ts'] is None else int(np.minimum(audio_length_in_samples - 1, word['end_ts'] + fade_duration_in_samples))
+            )
+            for word in word_locations_in_samples
+        ]
 
         return audio_transcript, word_locations_in_samples
 
@@ -78,6 +83,8 @@ class PronunciationTrainer:
     def processAudioForGivenText(self, recordedAudio: torch.Tensor = None, real_text=None):
 
         start = time.time()
+        
+        print('Start get audo transcript: ', str(start))
         recording_transcript, recording_ipa, word_locations = self.getAudioTranscript(
             recordedAudio)
         print('Time for NN to transcript audio: ', str(time.time()-start))
@@ -123,10 +130,12 @@ class PronunciationTrainer:
         start_time = []
         end_time = []
         for word_idx in range(len(mapped_words_indices)):
-            start_time.append(float(word_locations[mapped_words_indices[word_idx]]
-                                    [0])/self.sampling_rate)
-            end_time.append(float(word_locations[mapped_words_indices[word_idx]]
-                                  [1])/self.sampling_rate)
+            word_loc = word_locations[mapped_words_indices[word_idx]]
+            start_time.append(float(word_loc[0]) / self.sampling_rate)
+            if word_loc[1] is None:
+                end_time.append(None)
+            else:
+                end_time.append(float(word_loc[1]) / self.sampling_rate)
         return ' '.join([str(time) for time in start_time]), ' '.join([str(time) for time in end_time])
 
     ##################### END ASR Functions ###########################

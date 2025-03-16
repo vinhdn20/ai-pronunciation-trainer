@@ -14,7 +14,7 @@ import io
 import tempfile
 
 trainer_SST_lambda = {}
-trainer_SST_lambda['de'] = pronunciationTrainer.getTrainer("de")
+# trainer_SST_lambda['de'] = pronunciationTrainer.getTrainer("de")
 trainer_SST_lambda['en'] = pronunciationTrainer.getTrainer("en")
 
 transform = Resample(orig_freq=48000, new_freq=16000)
@@ -41,18 +41,19 @@ def lambda_handler(event, context):
             'body': ''
         }
 
-    
-    with tempfile.NamedTemporaryFile(suffix=".ogg", delete=True) as tmp:
+    tmp_name = ''
+    with tempfile.NamedTemporaryFile(suffix=".ogg", delete=False) as tmp:
         tmp.write(file_bytes)
         tmp.flush()
         tmp_name = tmp.name
         signal, fs = audioread_load(tmp_name)
+    
     signal = transform(torch.Tensor(signal)).unsqueeze(0)
 
 
     result = trainer_SST_lambda[language].processAudioForGivenText(
         signal, real_text)
-
+    print('Result: ', result)
     #start = time.time()
     #os.remove(random_file_name)
     #print('Time for deleting file: ', str(time.time()-start))
@@ -96,7 +97,7 @@ def lambda_handler(event, context):
            'start_time': result['start_time'],
            'end_time': result['end_time'],
            'is_letter_correct_all_words': is_letter_correct_all_words}
-
+    os.unlink(tmp_name) # delete file after use
     return json.dumps(res)
 
 
